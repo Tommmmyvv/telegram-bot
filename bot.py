@@ -19,13 +19,59 @@ app = Flask(__name__)
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
 # Маршруты
-Installing collected packages: werkzeug, urllib3, python-dotenv, MarkupSafe, itsdangerous, idna, gunicorn, click, charset-normalizer, certifi, requests, Jinja2, pyTelegramBotAPI, flask
-Successfully installed Jinja2-3.1.4 MarkupSafe-3.0.2 certifi-2024.8.30 charset-normalizer-3.4.0 click-8.1.7 flask-2.0.1 gunicorn-20.1.0 idna-3.10 itsdangerous-2.2.0 pyTelegramBotAPI-4.12.0 python-dotenv-0.19.0 requests-2.32.3 urllib3-2.2.3 werkzeug-2.0.1
-[notice] A new release of pip is available: 24.0 -> 24.3.1
-[notice] To update, run: pip install --upgrade pip
-==> Uploading build...
-==> Build uploaded in 7s
-==> Build successful 🎉
-==> Deploying...
-==> No open ports detected, continuing to scan...
-==> Docs on specifying a port: https://render.com/docs/web-services#port-binding
+@app.route('/webhook', methods=['GET', 'POST'])
+def webhook():
+    try:
+        if request.method == 'GET':
+            return jsonify({
+                'status': 'webhook is working',
+                'method': 'GET'
+            })
+            
+        data = request.json
+        print("\n=== WEBHOOK DATA ===")
+        print("Raw data:", json.dumps(data, indent=2))
+        
+        if isinstance(data, list) and len(data) > 0:
+            event = data[0]
+            contact = event.get('contact', {})
+            event_type = event.get('title')
+            variables = contact.get('variables', {})
+            last_message = contact.get('last_message', '')
+            
+            print("\n=== DETAILED EVENT INFO ===")
+            print(f"Event type: {event_type}")
+            print(f"Variables: {json.dumps(variables, indent=2)}")
+            print(f"Last message: {last_message}")
+            print(f"Contact info: {json.dumps(contact, indent=2)}")
+            
+            # Получаем данные пользователя
+            username = contact.get('username', 'Не указано')
+            name = contact.get('name', 'Не указано')
+            
+            # Отправляем уведомление для любого события с выбором
+            if last_message in ['Модель', 'Чатер']:
+                message = f"""
+👤 <b>{name}</b> (@{username})
+✅ Выбрал: <b>{last_message}</b>
+⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+                
+                print("\n=== SENDING MESSAGE ===")
+                print(f"Message: {message}")
+                
+                try:
+                    bot.send_message(TELEGRAM_CHAT_ID, message, parse_mode='HTML')
+                    print("Message sent successfully")
+                except Exception as e:
+                    print(f"Error sending message: {str(e)}")
+            else:
+                print(f"No selection found in message: {last_message}")
+                
+        return jsonify({'status': 'success', 'message': 'Webhook processed'})
+    except Exception as e:
+        print(f"\n=== ERROR ===")
+        print(f"Error in webhook: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        return jsonify({'status': 'error', 'error': str(e)}), 500
