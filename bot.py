@@ -1,5 +1,3 @@
-# ... существующий код ...
-
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
@@ -7,41 +5,39 @@ def webhook():
     if isinstance(data, list) and len(data) > 0:
         event = data[0]
         contact = event.get('contact', {})
+        variables = contact.get('variables', {})
         
-        # Получаем основную информацию
+        # Получаем значения из существующих переменных
         username = contact.get('username', 'Не указано')
-        name = contact.get('variables', {}).get('name', 'Не указано')
-        event_type = event.get('title')
+        name = variables.get('$name', 'Не указано')
+        selected_option = variables.get('$selected_option', 'Не указано')
+        current_datetime = variables.get('$current_datetime', 'Не указано')
         
         # Формируем сообщение в зависимости от типа события
         if event_type == 'new_subscriber':
             message = f"""
-🎉 <b>Новый подписчик!</b>
+🎉 <b>Новый подписчик в {variables.get('$bot_name', 'боте')}</b>
 👤 Имя: {name}
 📱 Telegram: @{username}
-⏰ Время: {datetime.fromtimestamp(event.get('date', 0)/1000).strftime('%Y-%m-%d %H:%M:%S')}
+⏰ Время: {current_datetime}
+"""
+        elif event_type == 'incoming_message':
+            message = f"""
+✍️ <b>Пользователь ввел имя</b>
+👤 Введенное имя: {name}
+📱 Telegram: @{username}
+⏰ Время: {current_datetime}
 """
         elif event_type == 'run_custom_flow':
-            selected_option = contact.get('variables', {}).get('selected_option', 'Не указано')
             message = f"""
 🔄 <b>Сделан выбор!</b>
 👤 Имя: {name}
 📱 Telegram: @{username}
 🎯 Выбрал: {selected_option}
-⏰ Время: {datetime.fromtimestamp(event.get('date', 0)/1000).strftime('%Y-%m-%d %H:%M:%S')}
-"""
-        else:
-            message = f"""
-ℹ️ <b>Новое событие в SendPulse</b>
-Тип: {event_type}
-👤 Имя: {name}
-📱 Telegram: @{username}
-⏰ Время: {datetime.fromtimestamp(event.get('date', 0)/1000).strftime('%Y-%m-%d %H:%M:%S')}
+⏰ Время: {current_datetime}
 """
         
         # Отправляем уведомление в Telegram
         bot.send_message(TELEGRAM_CHAT_ID, message, parse_mode='HTML')
         
     return 'OK'
-
-# ... остальной код ...
