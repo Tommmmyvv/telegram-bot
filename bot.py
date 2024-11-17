@@ -9,6 +9,10 @@ app = Flask(__name__)
 bot = telebot.TeleBot(os.getenv('TELEGRAM_BOT_TOKEN'))
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
+@app.route('/')
+def home():
+    return 'Bot is running'
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
@@ -40,5 +44,6 @@ https://ваш_домен/webhook
 """)
 
 if __name__ == '__main__':
-    # Запускаем Flask сервер
-    app.run(host='0.0.0.0', port=5000)
+    # Определяем порт из переменной окружения или используем 5000
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
