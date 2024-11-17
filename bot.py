@@ -6,12 +6,17 @@ def webhook():
         event = data[0]
         contact = event.get('contact', {})
         variables = contact.get('variables', {})
+        event_type = event.get('title')  # Добавили эту строку
         
         # Получаем значения из существующих переменных
         username = contact.get('username', 'Не указано')
         name = variables.get('$name', 'Не указано')
         selected_option = variables.get('$selected_option', 'Не указано')
         current_datetime = variables.get('$current_datetime', 'Не указано')
+        
+        # Добавим логирование для отладки
+        print(f"Received event: {event_type}")
+        print(f"Variables: {variables}")
         
         # Формируем сообщение в зависимости от типа события
         if event_type == 'new_subscriber':
@@ -34,6 +39,14 @@ def webhook():
 👤 Имя: {name}
 📱 Telegram: @{username}
 🎯 Выбрал: {selected_option}
+⏰ Время: {current_datetime}
+"""
+        else:
+            message = f"""
+ℹ️ <b>Новое событие в боте</b>
+📋 Тип события: {event_type}
+👤 Имя: {name}
+📱 Telegram: @{username}
 ⏰ Время: {current_datetime}
 """
         
