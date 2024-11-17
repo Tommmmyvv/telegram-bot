@@ -3,7 +3,7 @@ services:
     name: telegram-bot
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python bot.py  # Изменено на прямой запуск Python
+    startCommand: gunicorn bot:app --bind 0.0.0.0:$PORT  # Изменено для правильной работы с Flask
     envVars:
       - key: TELEGRAM_BOT_TOKEN
         sync: false
