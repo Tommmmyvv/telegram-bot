@@ -19,14 +19,6 @@ app = Flask(__name__)
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
 # Маршруты
-@app.route('/')
-@app.route('/index')
-def home():
-    return jsonify({
-        'status': 'ok',
-        'message': 'Bot is running'
-    })
-
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     try:
@@ -53,24 +45,35 @@ def webhook():
             # Получаем данные пользователя
             username = contact.get('username', 'Не указано')
             name = contact.get('name', 'Не указано')
-            last_message = contact.get('last_message', '')
             
-            # Проверяем тип события и сообщение
-            if event_type == 'incoming_message' and last_message in ['Модель', 'Чатер']:
-                message = f"""
+            # Проверяем тип события и переменные
+            if event_type == 'run_custom_flow':
+                # Проверяем все возможные места, где может быть выбор
+                selected_option = (
+                    variables.get('selected_option') or 
+                    variables.get('$selected_option') or 
+                    contact.get('last_message')
+                )
+                
+                print(f"Selected option: {selected_option}")
+                
+                if selected_option in ['Модель', 'Чатер']:
+                    message = f"""
 👤 <b>{name}</b> (@{username})
-✅ Выбрал: <b>{last_message}</b>
+✅ Выбрал: <b>{selected_option}</b>
 ⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
-                
-                print("\n=== SENDING MESSAGE ===")
-                print(f"Message: {message}")
-                
-                try:
-                    bot.send_message(TELEGRAM_CHAT_ID, message, parse_mode='HTML')
-                    print("Message sent successfully")
-                except Exception as e:
-                    print(f"Error sending message: {str(e)}")
+                    
+                    print("\n=== SENDING MESSAGE ===")
+                    print(f"Message: {message}")
+                    
+                    try:
+                        bot.send_message(TELEGRAM_CHAT_ID, message, parse_mode='HTML')
+                        print("Message sent successfully")
+                    except Exception as e:
+                        print(f"Error sending message: {str(e)}")
+            else:
+                print(f"Skipping event type: {event_type}")
                 
         return jsonify({'status': 'success', 'message': 'Webhook processed'})
     except Exception as e:
