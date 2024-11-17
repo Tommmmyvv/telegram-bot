@@ -1,3 +1,45 @@
+import os
+from flask import Flask, request, jsonify
+import telebot
+from dotenv import load_dotenv
+from datetime import datetime
+import json
+
+# Загрузка переменных окружения
+load_dotenv()
+
+# Глобальные переменные
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+
+# Создание приложения Flask
+app = Flask(__name__)
+
+# Создание бота
+bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
+
+# Маршруты
+@app.route('/')
+def home():
+    try:
+        if not TELEGRAM_BOT_TOKEN:
+            return 'Error: TELEGRAM_BOT_TOKEN not set'
+        if not TELEGRAM_CHAT_ID:
+            return 'Error: TELEGRAM_CHAT_ID not set'
+            
+        bot.send_message(TELEGRAM_CHAT_ID, "✅ Бот успешно запущен!")
+        return 'Bot is running and telegram message sent successfully!'
+    except Exception as e:
+        return f'Error: {str(e)}'
+
+@app.route('/test')
+def test():
+    return jsonify({
+        'status': 'ok',
+        'telegram_token': bool(TELEGRAM_BOT_TOKEN),
+        'chat_id': bool(TELEGRAM_CHAT_ID)
+    })
+
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     try:
@@ -50,11 +92,11 @@ def webhook():
 """
                 
             print("\n=== SENDING MESSAGE ===")
-            print("Chat ID:", chat_id)
+            print("Chat ID:", TELEGRAM_CHAT_ID)
             print("Message:", message)
             
             try:
-                bot.send_message(chat_id, message, parse_mode='HTML')
+                bot.send_message(TELEGRAM_CHAT_ID, message, parse_mode='HTML')
                 print("Message sent successfully")
             except Exception as e:
                 print(f"Error sending message: {str(e)}")
@@ -66,3 +108,6 @@ def webhook():
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         return jsonify({'status': 'error', 'error': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
