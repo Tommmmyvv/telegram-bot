@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import telebot
 from dotenv import load_dotenv
 
@@ -11,39 +11,37 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 @app.route('/')
 def home():
-    return 'Bot is running'
+    try:
+        # Проверяем наличие переменных окружения
+        if not os.getenv('TELEGRAM_BOT_TOKEN'):
+            return 'Error: TELEGRAM_BOT_TOKEN not set'
+        if not os.getenv('TELEGRAM_CHAT_ID'):
+            return 'Error: TELEGRAM_CHAT_ID not set'
+            
+        # Пробуем отправить тестовое сообщение
+        bot.send_message(TELEGRAM_CHAT_ID, "✅ Бот успешно запущен!")
+        return 'Bot is running and telegram message sent successfully!'
+    except Exception as e:
+        return f'Error: {str(e)}'
 
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    data = request.json
-    
-    # Форматируем сообщение из SendPulse
-    if 'message' in data:
-        message = f"""
-📩 <b>Новое сообщение в чате SendPulse</b>
+@app.route('/test')
+def test():
+    return jsonify({
+        'status': 'ok',
+        'telegram_token': bool(os.getenv('TELEGRAM_BOT_TOKEN')),
+        'chat_id': bool(os.getenv('TELEGRAM_CHAT_ID')),
+        'token_value': os.getenv('TELEGRAM_BOT_TOKEN')[:10] + '...' if os.getenv('TELEGRAM_BOT_TOKEN') else None,
+        'chat_id_value': os.getenv('TELEGRAM_CHAT_ID')
+    })
 
-От: {data['message'].get('sender', 'Неизвестно')}
-Сообщение: {data['message'].get('text', 'Нет текста')}
-Время: {data['message'].get('created_at', 'Не указано')}
-"""
-    else:
-        message = f"📌 Новое уведомление от SendPulse:\n{str(data)}"
-
-    # Отправляем в Telegram
-    bot.send_message(TELEGRAM_CHAT_ID, message, parse_mode='HTML')
-    return 'OK'
-
-@bot.message_handler(commands=['start'])
-def start(message):
-    bot.reply_to(message, f"""
-✨ Бот готов к работе!
-Ваш chat_id: {message.chat.id}
-
-Настройте вебхук в SendPulse на URL:
-https://ваш_домен/webhook
-""")
+# Добавим обработчик ошибок
+@app.errorhandler(Exception)
+def handle_error(error):
+    return jsonify({
+        'error': str(error),
+        'status': 'error'
+    }), 500
 
 if __name__ == '__main__':
-    # Определяем порт из переменной окружения или используем 5000
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
