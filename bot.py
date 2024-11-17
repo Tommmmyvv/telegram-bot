@@ -36,19 +36,27 @@ def webhook():
             event = data[0]
             contact = event.get('contact', {})
             event_type = event.get('title')
+            variables = contact.get('variables', {})
+            
+            print("\n=== EVENT INFO ===")
+            print(f"Event type: {event_type}")
+            print(f"Variables: {json.dumps(variables, indent=2)}")
             
             # Получаем данные пользователя
             username = contact.get('username', 'Не указано')
             name = contact.get('name', 'Не указано')
-            last_message = contact.get('last_message', '')
             
-            # Отправляем сообщение только если это выбор опции
-            if event_type == 'run_custom_flow' and last_message in ['Модель', 'Чатер']:
+            # Проверяем переменные для определения выбора
+            selected_option = variables.get('selected_option')
+            if event_type == 'run_custom_flow' and selected_option in ['Модель', 'Чатер']:
                 message = f"""
 👤 <b>{name}</b> (@{username})
-✅ Выбрал: <b>{last_message}</b>
+✅ Выбрал: <b>{selected_option}</b>
 ⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
+                
+                print("\n=== SENDING MESSAGE ===")
+                print(f"Message: {message}")
                 
                 try:
                     bot.send_message(TELEGRAM_CHAT_ID, message, parse_mode='HTML')
@@ -58,5 +66,8 @@ def webhook():
                 
         return jsonify({'status': 'success', 'message': 'Webhook processed'})
     except Exception as e:
+        print(f"\n=== ERROR ===")
         print(f"Error in webhook: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return jsonify({'status': 'error', 'error': str(e)}), 500
