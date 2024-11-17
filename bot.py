@@ -1,41 +1,3 @@
-import os
-from flask import Flask, request, jsonify
-import telebot
-from dotenv import load_dotenv
-from datetime import datetime
-import json
-
-# Сначала создаем приложение Flask и загружаем переменные
-load_dotenv()
-app = Flask(__name__)
-
-# Инициализация бота
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
-
-# Определяем все маршруты после создания app
-@app.route('/')
-def home():
-    try:
-        if not TELEGRAM_BOT_TOKEN:
-            return 'Error: TELEGRAM_BOT_TOKEN not set'
-        if not TELEGRAM_CHAT_ID:
-            return 'Error: TELEGRAM_CHAT_ID not set'
-            
-        bot.send_message(TELEGRAM_CHAT_ID, "✅ Бот успешно запущен!")
-        return 'Bot is running and telegram message sent successfully!'
-    except Exception as e:
-        return f'Error: {str(e)}'
-
-@app.route('/test')
-def test():
-    return jsonify({
-        'status': 'ok',
-        'telegram_token': bool(TELEGRAM_BOT_TOKEN),
-        'chat_id': bool(TELEGRAM_CHAT_ID)
-    })
-
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     try:
@@ -57,32 +19,33 @@ def webhook():
             
             print("\n=== EVENT INFO ===")
             print("Event type:", event_type)
+            print("Contact:", json.dumps(contact, indent=2))
             
             # Получаем данные пользователя
             username = contact.get('username') or contact.get('telegram_id', 'Не указано')
             name = contact.get('name', 'Не указано')
             last_message = contact.get('last_message', 'Нет сообщения')
             
-            # Обрабатываем разные типы событий
-            if event_type == 'bot_block':
+            # Обрабатываем все возможные события
+            if event_type in ['new_subscriber', 'bot_unblock', 'unsubscribe', 'bot_block']:
+                action_map = {
+                    'new_subscriber': '✅ подписался на бота',
+                    'bot_unblock': '🔓 разблокировал бота',
+                    'unsubscribe': '❌ отписался от бота',
+                    'bot_block': '🚫 заблокировал бота'
+                }
+                
                 message = f"""
-🚫 <b>Пользователь заблокировал бота</b>
+<b>Действие пользователя</b>
+👤 Пользователь {action_map.get(event_type)}
 
-👤 Имя: {name}
-📱 Telegram: {username}
-⏰ Время: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-"""
-            elif event_type == 'new_subscriber':
-                message = f"""
-✅ <b>Пользователь возобновил работу с ботом</b>
-
-👤 Имя: {name}
-📱 Telegram: {username}
-⏰ Время: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+Имя: {name}
+Telegram: {username}
+Время: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
             elif event_type == 'run_custom_flow':
                 message = f"""
-🔄 <b>Пользователь сделал выбор</b>
+🔄 <b>Сделан выбор в боте</b>
 
 👤 Имя: {name}
 📱 Telegram: {username}
@@ -115,7 +78,3 @@ def webhook():
         import traceback
         print(f"Traceback: {traceback.format_exc()}")
         return jsonify({'status': 'error', 'error': str(e)}), 500
-
-# Только для локальной разработки
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
