@@ -19,6 +19,14 @@ app = Flask(__name__)
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 
 # Маршруты
+@app.route('/')
+@app.route('/index')
+def home():
+    return jsonify({
+        'status': 'ok',
+        'message': 'Bot is running'
+    })
+
 @app.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     try:
@@ -45,13 +53,13 @@ def webhook():
             # Получаем данные пользователя
             username = contact.get('username', 'Не указано')
             name = contact.get('name', 'Не указано')
+            last_message = contact.get('last_message', '')
             
-            # Проверяем переменные для определения выбора
-            selected_option = variables.get('selected_option')
-            if event_type == 'run_custom_flow' and selected_option in ['Модель', 'Чатер']:
+            # Проверяем тип события и сообщение
+            if event_type == 'incoming_message' and last_message in ['Модель', 'Чатер']:
                 message = f"""
 👤 <b>{name}</b> (@{username})
-✅ Выбрал: <b>{selected_option}</b>
+✅ Выбрал: <b>{last_message}</b>
 ⏰ {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 """
                 
